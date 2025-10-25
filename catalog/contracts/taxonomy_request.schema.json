@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "operation": {
+      "type": "string",
+      "enum": ["validate", "analyze", "add"]
+    },
+    "content": {"type": "string"},
+    "term": {"type": "string"}
+  }
+}

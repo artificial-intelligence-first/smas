@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["files_modified", "commit_sha", "branch", "validation_passed"],
+  "properties": {
+    "files_modified": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "commit_sha": {"type": "string"},
+    "pr_url": {"type": "string"},
+    "branch": {"type": "string"},
+    "validation_passed": {"type": "boolean"}
+  }
+}

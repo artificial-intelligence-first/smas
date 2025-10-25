@@ -1,0 +1,22 @@
+version: 0.1.0
+slug: content-retriever-sag
+name: ContentRetrieverSAG
+role: sub
+entrypoint: catalog/agents/sub/content-retriever-sag/code/retriever.py:run
+depends_on:
+  skills:
+    - agdd://skill.ssot-search@>=0.1.0
+contracts:
+  input_schema: catalog/contracts/content_query.schema.json
+  output_schema: catalog/contracts/content_answer.schema.json
+budgets:
+  tokens: 50000
+  time_s: 30
+provider_config:
+  task_type: retrieval
+  estimated_duration: short
+  resource_hint: light
+observability:
+  logs: true
+  metrics: true
+  traces: basic

@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["reference_graph", "orphans", "cycles", "statistics"],
+  "properties": {
+    "reference_graph": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {"type": "string"}
+      }
+    },
+    "orphans": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "cycles": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {"type": "string"}
+      }
+    },
+    "statistics": {
+      "type": "object",
+      "properties": {
+        "total_files": {"type": "integer"},
+        "total_references": {"type": "integer"},
+        "orphan_count": {"type": "integer"}
+      },
+      "required": ["total_files", "total_references", "orphan_count"]
+    }
+  }
+}

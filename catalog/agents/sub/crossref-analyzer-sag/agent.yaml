@@ -1,0 +1,14 @@
+version: 0.1.0
+slug: crossref-analyzer-sag
+name: CrossRefAnalyzerSAG
+role: sub
+entrypoint: catalog/agents/sub/crossref-analyzer-sag/code/analyzer.py:run
+contracts:
+  input_schema: catalog/contracts/crossref_request.schema.json
+  output_schema: catalog/contracts/crossref_result.schema.json
+budgets:
+  tokens: 40000
+  time_s: 60
+observability:
+  logs: true
+  metrics: true

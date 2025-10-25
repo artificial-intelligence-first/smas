@@ -1,0 +1,21 @@
+version: 0.1.0
+slug: content-validator-sag
+name: ContentValidatorSAG
+role: sub
+entrypoint: catalog/agents/sub/content-validator-sag/code/validator.py:run
+depends_on:
+  skills:
+    - agdd://skill.markdown-lint@>=0.1.0
+    - agdd://skill.link-checker@>=0.1.0
+contracts:
+  input_schema: catalog/contracts/validation_request.schema.json
+  output_schema: catalog/contracts/validation_result.schema.json
+budgets:
+  tokens: 30000
+  time_s: 60
+provider_config:
+  task_type: validation
+  estimated_duration: short
+observability:
+  logs: true
+  metrics: true

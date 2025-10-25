@@ -1,0 +1,14 @@
+version: 0.1.0
+slug: content-updater-sag
+name: ContentUpdaterSAG
+role: sub
+entrypoint: catalog/agents/sub/content-updater-sag/code/updater.py:run
+contracts:
+  input_schema: catalog/contracts/update_request.schema.json
+  output_schema: catalog/contracts/update_result.schema.json
+budgets:
+  tokens: 20000
+  time_s: 90
+observability:
+  logs: true
+  metrics: true

@@ -1,0 +1,19 @@
+agents:
+  - slug: ssot-manager-mag
+    version: 0.1.0
+    path: catalog/agents/main/ssot-manager-mag
+  - slug: content-retriever-sag
+    version: 0.1.0
+    path: catalog/agents/sub/content-retriever-sag
+  - slug: content-validator-sag
+    version: 0.1.0
+    path: catalog/agents/sub/content-validator-sag
+  - slug: taxonomy-manager-sag
+    version: 0.1.0
+    path: catalog/agents/sub/taxonomy-manager-sag
+  - slug: crossref-analyzer-sag
+    version: 0.1.0
+    path: catalog/agents/sub/crossref-analyzer-sag
+  - slug: content-updater-sag
+    version: 0.1.0
+    path: catalog/agents/sub/content-updater-sag

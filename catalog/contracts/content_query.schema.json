@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string",
+      "enum": ["files", "engineering", "tools", "platforms", "_meta", "all"]
+    },
+    "topic": {"type": "string"},
+    "question": {"type": "string"}
+  }
+}

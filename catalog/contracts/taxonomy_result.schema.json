@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "operation": {"type": "string"},
+    "passed": {"type": "boolean"},
+    "issues": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "term_usage": {
+      "type": "object",
+      "additionalProperties": {"type": "integer"}
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "success": {"type": "boolean"},
+    "term": {"type": "string"}
+  }
+}

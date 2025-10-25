@@ -1,0 +1,14 @@
+version: 0.1.0
+slug: taxonomy-manager-sag
+name: TaxonomyManagerSAG
+role: sub
+entrypoint: catalog/agents/sub/taxonomy-manager-sag/code/taxonomy.py:run
+contracts:
+  input_schema: catalog/contracts/taxonomy_request.schema.json
+  output_schema: catalog/contracts/taxonomy_result.schema.json
+budgets:
+  tokens: 40000
+  time_s: 45
+observability:
+  logs: true
+  metrics: true

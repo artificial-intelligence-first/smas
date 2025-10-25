@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["request_type"],
+  "properties": {
+    "request_type": {
+      "type": "string",
+      "enum": ["query", "update", "validate", "analyze"]
+    },
+    "query": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": ["files", "engineering", "tools", "platforms", "_meta", "all"]
+        },
+        "topic": {
+          "type": "string",
+          "description": "Search topic (e.g., AGENTS, MCP, Prompt Engineering)"
+        },
+        "question": {
+          "type": "string",
+          "description": "Specific question"
+        }
+      }
+    },
+    "update": {
+      "type": "object",
+      "properties": {
+        "target_file": {
+          "type": "string",
+          "description": "Target file path (e.g., files/AGENTS.md)"
+        },
+        "operation": {
+          "type": "string",
+          "enum": ["add", "update", "delete"]
+        },
+        "content": {
+          "type": "string",
+          "description": "Content to add or update"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for change"
+        }
+      }
+    },
+    "validation_scope": {
+      "type": "string",
+      "enum": ["all", "category", "file"],
+      "description": "Validation scope"
+    },
+    "analysis_type": {
+      "type": "string",
+      "enum": ["crossref", "taxonomy", "orphans", "full"],
+      "description": "Analysis type"
+    }
+  }
+}
