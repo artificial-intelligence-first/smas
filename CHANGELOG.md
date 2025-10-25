@@ -16,8 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CrossRefAnalyzerSAG: Inter-document reference analysis with orphan/cycle detection
 - ContentUpdaterSAG: Content updates with Git operations and PR creation
 - 12 JSON Schema contracts for agent input/output validation
-- Test skeletons for all 6 agents
-- AGDD stub for development (pending official package release)
+- Comprehensive automated tests for all agents and scenarios
+- AGDD local development stubs for observability and runner tooling
 - Project documentation (README, CONTRIBUTING, CODE_OF_CONDUCT)
 
 ### Changed

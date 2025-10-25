@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from agdd.observability.logger import ObservabilityLogger
@@ -64,8 +64,11 @@ def run(payload: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
                 "response_type": result["response_type"],
             },
         )
-
-        timestamp = datetime.utcnow().isoformat(timespec="milliseconds") + "Z"
+        timestamp = (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z")
+        )
         result["metadata"] = {
             "run_id": run_id,
             "timestamp": timestamp,

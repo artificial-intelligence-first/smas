@@ -4,8 +4,9 @@ Tests for ContentRetrieverSAG
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
+
+import pytest
 
 from catalog.agents.sub.content_retriever_sag.code.retriever import (
     run,
@@ -17,7 +18,7 @@ from catalog.agents.sub.content_retriever_sag.code.retriever import (
 class TestContentRetrieverSAG:
     """Test suite for ContentRetrieverSAG"""
 
-    def test_run_success(self, tmp_path: Path) -> None:
+    def test_run_success(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test successful retrieval"""
         ssot_dir = tmp_path / "ssot"
         ssot_dir.mkdir(parents=True, exist_ok=True)
@@ -34,7 +35,7 @@ class TestContentRetrieverSAG:
         }
         context = {"run_id": "test-retriever-001"}
 
-        os.environ["SSOT_REPO_PATH"] = str(ssot_dir)
+        monkeypatch.setenv("SSOT_REPO_PATH", str(ssot_dir))
 
         result = run(payload, context)
 
@@ -77,7 +78,9 @@ End."""
 
         assert "Best Practices" in section
 
-    def test_no_results_found(self, tmp_path: Path) -> None:
+    def test_no_results_found(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test when no relevant files found"""
         ssot_dir = tmp_path / "ssot-empty"
         ssot_dir.mkdir(parents=True, exist_ok=True)
@@ -89,7 +92,7 @@ End."""
         }
         context = {"run_id": "test-retriever-002"}
 
-        os.environ["SSOT_REPO_PATH"] = str(ssot_dir)
+        monkeypatch.setenv("SSOT_REPO_PATH", str(ssot_dir))
 
         result = run(payload, context)
 
