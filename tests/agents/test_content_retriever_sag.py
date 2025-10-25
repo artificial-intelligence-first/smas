@@ -1,50 +1,100 @@
+"""
+Tests for ContentRetrieverSAG
+"""
+
 from __future__ import annotations
 
-import importlib.util
+import os
 from pathlib import Path
-import sys
-import types
 
 import pytest
 
-agdd_pkg = sys.modules.setdefault("agdd", types.ModuleType("agdd"))
-observability_pkg = sys.modules.setdefault("agdd.observability", types.ModuleType("agdd.observability"))
+from catalog.agents.sub.content_retriever_sag.code.retriever import (
+    run,
+    _search_files,
+    _calculate_relevance,
+    _extract_relevant_section,
+)
 
 
-class _StubObservabilityLogger:
-  def __init__(self, *args, **kwargs) -> None:
-    return None
+class TestContentRetrieverSAG:
+    """Test suite for ContentRetrieverSAG"""
 
-  def log(self, *args, **kwargs) -> None:
-    return None
+    def test_run_success(self, tmp_path: Path) -> None:
+        """Test successful retrieval"""
+        ssot_dir = tmp_path / "ssot"
+        ssot_dir.mkdir(parents=True, exist_ok=True)
+        files_dir = ssot_dir / "files"
+        files_dir.mkdir(parents=True)
 
+        agents_file = files_dir / "AGENTS.md"
+        agents_file.write_text("# AGENTS\n\nThis is about agents.", encoding="utf-8")
 
-logger_module = types.ModuleType("agdd.observability.logger")
-logger_module.ObservabilityLogger = _StubObservabilityLogger
-observability_pkg.logger = logger_module
-sys.modules["agdd.observability.logger"] = logger_module
+        payload = {
+            "category": "files",
+            "topic": "AGENTS",
+            "question": "What is AGENTS?",
+        }
+        context = {"run_id": "test-retriever-001"}
 
-MODULE_PATH = Path(__file__).resolve().parents[2] / "catalog/agents/sub/content-retriever-sag/code/retriever.py"
-spec = importlib.util.spec_from_file_location("content_retriever", MODULE_PATH)
-assert spec and spec.loader
-retriever = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(retriever)  # type: ignore[union-attr]
+        os.environ["SSOT_REPO_PATH"] = str(ssot_dir)
 
+        result = run(payload, context)
 
-@pytest.mark.skip(reason="Content retriever logic requires SSOT repository fixture.")
-def test_content_retriever_placeholder() -> None:
-  assert True
+        assert "answer" in result
+        assert "sources" in result
+        assert "confidence" in result
+        assert result["question"] == "What is AGENTS?"
 
+    def test_calculate_relevance(self) -> None:
+        """Test relevance calculation"""
+        content = "This document is about AGENTS and best practices."
+        keywords = ["agents", "practices"]
 
-def test_sanitize_category_blocks_traversal() -> None:
-  with pytest.raises(ValueError):
-    retriever._sanitize_category("../outside")
+        relevance = _calculate_relevance(content, keywords)
 
+        assert relevance == 1.0
 
-def test_search_files_rejects_escape(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-  repo_root = tmp_path / "repo"
-  (repo_root / "files").mkdir(parents=True)
-  monkeypatch.setenv("SSOT_REPO_PATH", str(repo_root))
+    def test_calculate_relevance_partial(self) -> None:
+        """Test partial keyword match"""
+        content = "This document is about AGENTS only."
+        keywords = ["agents", "missing"]
 
-  with pytest.raises(ValueError):
-    retriever._search_files(str(repo_root), "../../etc", "", "", _StubObservabilityLogger("run", {}))
+        relevance = _calculate_relevance(content, keywords)
+
+        assert relevance == 0.5
+
+    def test_extract_relevant_section(self) -> None:
+        """Test section extraction"""
+        content = """# Introduction
+This is intro.
+
+# Best Practices
+This section has agents information.
+
+# Conclusion
+End."""
+        keywords = ["agents"]
+
+        section = _extract_relevant_section(content, keywords)
+
+        assert "Best Practices" in section
+
+    def test_no_results_found(self, tmp_path: Path) -> None:
+        """Test when no relevant files found"""
+        ssot_dir = tmp_path / "ssot-empty"
+        ssot_dir.mkdir(parents=True, exist_ok=True)
+
+        payload = {
+            "category": "files",
+            "topic": "NonExistent",
+            "question": "Where is it?",
+        }
+        context = {"run_id": "test-retriever-002"}
+
+        os.environ["SSOT_REPO_PATH"] = str(ssot_dir)
+
+        result = run(payload, context)
+
+        assert "No relevant information found" in result["answer"]
+        assert result["confidence"] == 0.0

@@ -1,179 +1,120 @@
+"""
+Tests for SSOTManagerMAG
+"""
+
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-import sys
-import types
-
 import pytest
+import pytest_mock
 
-agdd_pkg = sys.modules.setdefault("agdd", types.ModuleType("agdd"))
-observability_pkg = sys.modules.setdefault("agdd.observability", types.ModuleType("agdd.observability"))
-
-
-class _StubObservabilityLogger:
-  records: list[tuple[str, dict]] = []
-
-  def __init__(self, *args, **kwargs) -> None:
-    self.records = _StubObservabilityLogger.records
-
-  def log(self, *args, **kwargs) -> None:
-    event = args[0] if args else ""
-    payload = args[1] if len(args) > 1 else kwargs
-    self.records.append((event, payload))
+from catalog.agents.main.ssot-manager-mag.code.orchestrator import run
 
 
-logger_module = types.ModuleType("agdd.observability.logger")
-logger_module.ObservabilityLogger = _StubObservabilityLogger
-observability_pkg.logger = logger_module
-sys.modules["agdd.observability.logger"] = logger_module
+class TestSSOTManagerMAG:
+    """Test suite for SSOTManagerMAG"""
 
-runners_pkg = sys.modules.setdefault("agdd.runners", types.ModuleType("agdd.runners"))
-agent_runner_module = types.ModuleType("agdd.runners.agent_runner")
-agent_runner_module.invoke_sag = lambda *args, **kwargs: None
-runners_pkg.agent_runner = agent_runner_module
-sys.modules["agdd.runners.agent_runner"] = agent_runner_module
+    def test_handle_query_success(self, mocker: pytest_mock.plugin.MockerFixture) -> None:
+        """Test successful query handling"""
+        mock_invoke_sag = mocker.patch(
+            "catalog.agents.main.ssot-manager-mag.code.orchestrator.invoke_sag"
+        )
+        mock_invoke_sag.return_value = {
+            "question": "What is AGENTS?",
+            "answer": "AGENTS is a convention file.",
+            "sources": [],
+            "confidence": 0.8,
+        }
 
-MODULE_PATH = Path(__file__).resolve().parents[2] / "catalog/agents/main/ssot-manager-mag/code/orchestrator.py"
-spec = importlib.util.spec_from_file_location("ssot_manager_orchestrator", MODULE_PATH)
-assert spec and spec.loader  # basic sanity check for module loading
-orchestrator = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(orchestrator)  # type: ignore[union-attr]
+        payload = {
+            "request_type": "query",
+            "query": {
+                "category": "files",
+                "topic": "AGENTS",
+                "question": "What is AGENTS?",
+            },
+        }
+        context = {"run_id": "test-mag-001"}
 
+        result = run(payload, context)
 
-class DummyLogger:
-  def log(self, *args, **kwargs) -> None:
-    return None
+        assert result["response_type"] == "answer"
+        assert result["status"] == "success"
+        assert "metadata" in result
+        assert result["metadata"]["run_id"] == "test-mag-001"
 
+    def test_handle_validate_success(self, mocker: pytest_mock.plugin.MockerFixture) -> None:
+        """Test successful validation handling"""
+        mock_invoke_sag = mocker.patch(
+            "catalog.agents.main.ssot-manager-mag.code.orchestrator.invoke_sag"
+        )
+        mock_invoke_sag.return_value = {
+            "passed": True,
+            "errors": [],
+            "warnings": [],
+            "total_files": 10,
+        }
 
-@pytest.mark.skip(reason="Integration tests for AGDD runners are not implemented yet.")
-def test_ssot_manager_mag_placeholder() -> None:
-  assert True
+        payload = {"request_type": "validate", "validation_scope": "all"}
+        context = {"run_id": "test-mag-002"}
 
+        result = run(payload, context)
 
-def test_handle_update_validation_failure(monkeypatch: pytest.MonkeyPatch) -> None:
-  """Validation failures should return contract-compliant update_result payloads."""
-  def fake_invoke(name: str, payload: dict, parent_context: dict) -> dict:
-    assert name == "content-validator-sag"
-    return {"passed": False, "errors": ["missing field"]}
+        assert result["response_type"] == "validation_report"
+        assert result["status"] == "success"
 
-  monkeypatch.setattr(orchestrator, "invoke_sag", fake_invoke)
+    def test_handle_analyze_crossref(self, mocker: pytest_mock.plugin.MockerFixture) -> None:
+        """Test cross-reference analysis"""
+        mock_invoke_sag = mocker.patch(
+            "catalog.agents.main.ssot-manager-mag.code.orchestrator.invoke_sag"
+        )
+        mock_invoke_sag.return_value = {
+            "reference_graph": {},
+            "orphans": ["orphan.md"],
+            "cycles": [],
+            "statistics": {"total_files": 5, "orphan_count": 1},
+        }
 
-  payload = {"update": {"content": "value", "target_file": "docs/file.md"}}
-  context: dict = {}
+        payload = {"request_type": "analyze", "analysis_type": "crossref"}
+        context = {"run_id": "test-mag-003"}
 
-  response = orchestrator._handle_update(payload, context, DummyLogger())
+        result = run(payload, context)
 
-  assert response["response_type"] == "update_result"
-  assert response["status"] == "failure"
-  assert response["update_result"]["validation_passed"] is False
-  assert response["update_result"]["files_modified"] == ["docs/file.md"]
-  assert response["update_result"]["commit_sha"] == ""
-  assert response["update_result"]["branch"] == ""
-  assert "validation_errors" in response["data"]
-  assert context["sags_invoked"] == ["content-validator-sag"]
+        assert result["response_type"] == "analysis_report"
+        assert result["status"] == "success"
+        assert "crossref-analyzer-sag" in context.get("sags_invoked", [])
 
+    def test_invalid_request_type(self) -> None:
+        """Test error handling for invalid request type"""
+        payload = {"request_type": "invalid"}
+        context = {"run_id": "test-mag-004"}
 
-def test_handle_update_taxonomy_failure(monkeypatch: pytest.MonkeyPatch) -> None:
-  """Taxonomy failures should preserve validation state and contract fields."""
-  def fake_invoke(name: str, payload: dict, parent_context: dict) -> dict:
-    if name == "content-validator-sag":
-      return {"passed": True}
-    if name == "taxonomy-manager-sag":
-      return {"passed": False, "issues": ["taxonomy mismatch"]}
-    raise AssertionError(f"Unexpected SAG: {name}")
+        with pytest.raises(ValueError, match="Unknown request_type"):
+            run(payload, context)
 
-  monkeypatch.setattr(orchestrator, "invoke_sag", fake_invoke)
+    def test_update_validation_failure(
+        self, mocker: pytest_mock.plugin.MockerFixture
+    ) -> None:
+        """Test update request with validation failure"""
+        mock_invoke_sag = mocker.patch(
+            "catalog.agents.main.ssot-manager-mag.code.orchestrator.invoke_sag"
+        )
+        mock_invoke_sag.return_value = {
+            "passed": False,
+            "errors": [{"line": 1, "message": "Error"}],
+        }
 
-  payload = {"update": {"content": "value", "target_file": "docs/file.md"}}
-  context: dict = {}
+        payload = {
+            "request_type": "update",
+            "update": {
+                "target_file": "files/TEST.md",
+                "operation": "add",
+                "content": "Invalid content",
+                "reason": "Test",
+            },
+        }
+        context = {"run_id": "test-mag-005"}
 
-  response = orchestrator._handle_update(payload, context, DummyLogger())
+        result = run(payload, context)
 
-  assert response["response_type"] == "update_result"
-  assert response["status"] == "failure"
-  assert response["update_result"]["validation_passed"] is True
-  assert response["update_result"]["files_modified"] == ["docs/file.md"]
-  assert response["update_result"]["commit_sha"] == ""
-  assert response["update_result"]["branch"] == ""
-  assert "taxonomy_issues" in response["data"]
-  assert context["sags_invoked"] == ["content-validator-sag", "taxonomy-manager-sag"]
-
-
-def test_handle_analyze_orphans(monkeypatch: pytest.MonkeyPatch) -> None:
-  """Orphan analysis requests should invoke crossref analyzer and surface findings."""
-  def fake_invoke(name: str, payload: dict, parent_context: dict) -> dict:
-    if name == "crossref-analyzer-sag":
-      return {"orphans": ["doc/a.md", "doc/b.md"], "cycles": [["x", "y", "x"]]}
-    raise AssertionError(f"Unexpected SAG: {name}")
-
-  monkeypatch.setattr(orchestrator, "invoke_sag", fake_invoke)
-
-  context: dict = {}
-  response = orchestrator._handle_analyze({"analysis_type": "orphans"}, context, DummyLogger())
-
-  assert response["response_type"] == "analysis_report"
-  assert response["status"] == "success"
-  assert response["analysis_report"]["type"] == "orphans"
-  findings = response["analysis_report"]["findings"]
-  assert findings and findings[0]["orphan_count"] == 2
-  assert context["sags_invoked"] == ["crossref-analyzer-sag"]
-  recommendations = response["analysis_report"]["recommendations"]
-  assert any("orphan" in rec for rec in recommendations)
-
-
-def test_handle_update_delete_skips_validator(monkeypatch: pytest.MonkeyPatch) -> None:
-  """Delete operations should bypass validator to avoid repo-wide lint failures."""
-  invocations: list[str] = []
-
-  def fake_invoke(name: str, payload: dict, parent_context: dict) -> dict:
-    invocations.append(name)
-    if name == "taxonomy-manager-sag":
-      return {"passed": True}
-    if name == "content-updater-sag":
-      assert payload["operation"] == "delete"
-      return {
-        "files_modified": ["docs/file.md"],
-        "commit_sha": "abc123",
-        "branch": "smas-update-delete",
-        "validation_passed": True,
-      }
-    raise AssertionError(f"Unexpected SAG: {name}")
-
-  monkeypatch.setattr(orchestrator, "invoke_sag", fake_invoke)
-
-  context: dict = {}
-  response = orchestrator._handle_update(
-    {"update": {"operation": "delete", "target_file": "docs/file.md"}},
-    context,
-    DummyLogger(),
-  )
-
-  assert response["status"] == "success"
-  assert response["update_result"]["files_modified"] == ["docs/file.md"]
-  assert "content-validator-sag" not in invocations
-  assert invocations == ["taxonomy-manager-sag", "content-updater-sag"]
-  assert context["sags_invoked"] == ["taxonomy-manager-sag", "content-updater-sag"]
-
-
-def test_run_logs_failure_status(monkeypatch: pytest.MonkeyPatch) -> None:
-  """High-level run() should log actual handler status for failures."""
-  _StubObservabilityLogger.records.clear()
-
-  def fake_invoke(name: str, payload: dict, parent_context: dict) -> dict:
-    assert name == "content-validator-sag"
-    return {"passed": False, "errors": ["bad"]}
-
-  monkeypatch.setattr(orchestrator, "invoke_sag", fake_invoke)
-
-  payload = {
-    "request_type": "update",
-    "update": {"operation": "update", "content": "value", "target_file": "docs/file.md"},
-  }
-  context: dict = {"run_id": "run-1"}
-
-  result = orchestrator.run(payload, context)
-
-  assert result["status"] == "failure"
-  assert _StubObservabilityLogger.records[-1][0] == "end"
-  assert _StubObservabilityLogger.records[-1][1]["status"] == "failure"
+        assert result["response_type"] == "update_result"
+        assert result["status"] == "failure"

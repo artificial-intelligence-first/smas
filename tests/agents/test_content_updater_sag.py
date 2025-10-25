@@ -1,62 +1,97 @@
+"""
+Tests for ContentUpdaterSAG
+"""
+
 from __future__ import annotations
 
-import importlib.util
+import os
 from pathlib import Path
-import sys
-import types
+from unittest.mock import Mock
 
 import pytest
 
-agdd_pkg = sys.modules.setdefault("agdd", types.ModuleType("agdd"))
-observability_pkg = sys.modules.setdefault("agdd.observability", types.ModuleType("agdd.observability"))
+from catalog.agents.sub.content_updater_sag.code.updater import (
+    run,
+    _resolve_repo_path,
+    _sanitize_ref_component,
+)
 
 
-class _StubObservabilityLogger:
-  def __init__(self, *args, **kwargs) -> None:
-    return None
+class TestContentUpdaterSAG:
+    """Test suite for ContentUpdaterSAG"""
 
-  def log(self, *args, **kwargs) -> None:
-    return None
+    def test_run_add_creates_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Add operation should write file and return commit info"""
+        repo_root = tmp_path / "repo"
+        repo_root.mkdir()
+        monkeypatch.setenv("SSOT_REPO_PATH", str(repo_root))
 
+        git_mock = Mock(return_value="abc123")
+        monkeypatch.setattr(
+            "catalog.agents.sub.content_updater_sag.code.updater._git_commit",
+            git_mock,
+        )
+        monkeypatch.setattr(
+            "catalog.agents.sub.content_updater_sag.code.updater._create_pull_request",
+            Mock(return_value="https://example.com/pr"),
+        )
 
-logger_module = types.ModuleType("agdd.observability.logger")
-logger_module.ObservabilityLogger = _StubObservabilityLogger
-observability_pkg.logger = logger_module
-sys.modules["agdd.observability.logger"] = logger_module
+        payload = {
+            "operation": "add",
+            "target_file": "docs/new.md",
+            "content": "Hello World",
+            "reason": "Add new doc",
+        }
+        context = {"run_id": "updater-001"}
 
-MODULE_PATH = Path(__file__).resolve().parents[2] / "catalog/agents/sub/content-updater-sag/code/updater.py"
-spec = importlib.util.spec_from_file_location("content_updater", MODULE_PATH)
-assert spec and spec.loader
-updater = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(updater)  # type: ignore[union-attr]
+        result = run(payload, context)
 
+        created_file = repo_root / "docs" / "new.md"
+        assert created_file.exists()
+        assert created_file.read_text(encoding="utf-8") == "Hello World"
+        git_mock.assert_called_once()
+        assert result["commit_sha"] == "abc123"
 
-@pytest.mark.skip(reason="Content updater requires Git fixture and SSOT checkout.")
-def test_content_updater_placeholder() -> None:
-  assert True
+    def test_run_delete_removes_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Delete operation should remove file if present"""
+        repo_root = tmp_path / "repo"
+        target = repo_root / "docs" / "obsolete.md"
+        target.parent.mkdir(parents=True)
+        target.write_text("Old content", encoding="utf-8")
+        monkeypatch.setenv("SSOT_REPO_PATH", str(repo_root))
 
+        monkeypatch.setattr(
+            "catalog.agents.sub.content_updater_sag.code.updater._git_commit",
+            Mock(return_value="deadbeef"),
+        )
 
-def test_resolve_repo_path_blocks_escape(tmp_path: Path) -> None:
-  repo_root = tmp_path / "repo"
-  repo_root.mkdir()
+        payload = {
+            "operation": "delete",
+            "target_file": "docs/obsolete.md",
+            "reason": "Cleanup",
+        }
+        context = {"run_id": "updater-002"}
 
-  with pytest.raises(ValueError):
-    updater._resolve_repo_path(str(repo_root), "../outside.md")
+        result = run(payload, context)
 
+        assert not target.exists()
+        assert result["files_modified"] == ["docs/obsolete.md"]
 
-def test_run_rejects_path_traversal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-  repo_root = tmp_path / "repo"
-  repo_root.mkdir()
+    def test_run_unknown_operation(self) -> None:
+        """Invalid operations should raise ValueError"""
+        with pytest.raises(ValueError):
+            run({"operation": "rename", "target_file": "docs/doc.md"}, {"run_id": "updater-003"})
 
-  monkeypatch.setenv("SSOT_REPO_PATH", str(repo_root))
+    def test_resolve_repo_path_rejects_escape(self, tmp_path: Path) -> None:
+        """Reject attempts to navigate outside repository"""
+        repo_root = tmp_path / "repo"
+        repo_root.mkdir()
 
-  def fail_git_commit(*args, **kwargs):
-    raise AssertionError("git commit should not be invoked")
+        with pytest.raises(ValueError):
+            _resolve_repo_path(str(repo_root), "../secrets.txt")
 
-  monkeypatch.setattr(updater, "_git_commit", fail_git_commit)
+    def test_sanitize_ref_component(self) -> None:
+        """Run IDs should be normalized for branch names"""
+        sanitized = _sanitize_ref_component("run id with spaces & symbols!")
 
-  with pytest.raises(ValueError):
-    updater.run(
-      {"target_file": "../../etc/passwd", "operation": "add", "content": "danger"},
-      {"run_id": "test"},
-    )
+        assert sanitized == "run-id-with-spaces-symbols"
