@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import Any, Dict
 
@@ -32,13 +33,15 @@ async def invoke_agent(agent_slug: str, request: A2AInvokeRequest) -> Dict[str, 
         # Build context
         context = request.parent_context or build_context()
 
-        # Check if invoking main agent
+        # Check if invoking main agent (run in thread to avoid blocking event loop)
         if agent_slug == "ssot-manager-mag":
             run = load_orchestrator()
-            result = run(request.payload, context)
+            result = await asyncio.to_thread(run, request.payload, context)
         else:
-            # Invoke sub-agent
-            result = invoke_sag(agent_slug, request.payload, parent_context=context)
+            # Invoke sub-agent (run in thread to avoid blocking event loop)
+            result = await asyncio.to_thread(
+                invoke_sag, agent_slug, request.payload, parent_context=context
+            )
 
         execution_time_ms = (time.time() - start_time) * 1000
 

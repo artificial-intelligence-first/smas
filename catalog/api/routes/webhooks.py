@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import hmac
+import os
+from hashlib import sha256
 from typing import Any, Dict
 
 from fastapi import APIRouter, Header, HTTPException, Request
@@ -11,6 +15,28 @@ from catalog.api.utils import build_context, load_orchestrator
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
+def _verify_github_signature(payload_body: bytes, signature: str, secret: str) -> bool:
+    """
+    Verify GitHub webhook signature.
+
+    Args:
+        payload_body: Raw request body bytes
+        signature: X-Hub-Signature-256 header value
+        secret: GitHub webhook secret
+
+    Returns:
+        True if signature is valid, False otherwise
+    """
+    if not signature or not signature.startswith("sha256="):
+        return False
+
+    expected_signature = (
+        "sha256=" + hmac.new(secret.encode(), payload_body, sha256).hexdigest()
+    )
+
+    return hmac.compare_digest(signature, expected_signature)
+
+
 @router.post("/github")
 async def github_webhook(
     request: Request,
@@ -18,15 +44,37 @@ async def github_webhook(
     x_hub_signature_256: str = Header(None),
 ) -> Dict[str, Any]:
     """
-    Handle GitHub webhook events.
+    Handle GitHub webhook events with signature verification.
 
     Supported events:
     - pull_request.opened: Automatically validate PR changes
     - pull_request.synchronize: Re-validate on new commits
     - push: Validate pushed commits
 
+    Security:
+    - Requires GITHUB_WEBHOOK_SECRET environment variable
+    - Validates X-Hub-Signature-256 header
+
     Returns validation results and optional GitHub Status API updates.
     """
+    # Get raw body for signature verification
+    body = await request.body()
+
+    # Verify webhook signature (skip for ping events during setup)
+    webhook_secret = os.getenv("GITHUB_WEBHOOK_SECRET")
+    if webhook_secret and x_github_event != "ping":
+        if not x_hub_signature_256:
+            raise HTTPException(
+                status_code=401,
+                detail="Missing X-Hub-Signature-256 header",
+            )
+
+        if not _verify_github_signature(body, x_hub_signature_256, webhook_secret):
+            raise HTTPException(
+                status_code=403,
+                detail="Invalid webhook signature",
+            )
+
     # Parse webhook payload
     payload = await request.json()
 
@@ -60,9 +108,9 @@ async def _handle_pull_request(payload: Dict[str, Any]) -> Dict[str, Any]:
         "validation_scope": "all",
     }
 
-    # Execute validation
+    # Execute validation (run in thread to avoid blocking event loop)
     run = load_orchestrator()
-    result = run(validation_request, context)
+    result = await asyncio.to_thread(run, validation_request, context)
 
     # TODO: Report result to GitHub Status API
     # This would require GitHub API token and commit SHA
@@ -96,9 +144,9 @@ async def _handle_push(payload: Dict[str, Any]) -> Dict[str, Any]:
         "validation_scope": "all",
     }
 
-    # Execute validation
+    # Execute validation (run in thread to avoid blocking event loop)
     run = load_orchestrator()
-    result = run(validation_request, context)
+    result = await asyncio.to_thread(run, validation_request, context)
 
     return {
         "status": "processed",

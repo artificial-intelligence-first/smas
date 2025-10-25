@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
@@ -32,9 +33,9 @@ async def execute(request: ExecuteRequest) -> Dict[str, Any]:
         # Convert Pydantic model to dict for orchestrator
         payload = request.model_dump(exclude_none=True)
 
-        # Load and execute via orchestrator
+        # Load and execute via orchestrator (run in thread to avoid blocking event loop)
         run = load_orchestrator()
-        result = run(payload, context)
+        result = await asyncio.to_thread(run, payload, context)
 
         return result
 
