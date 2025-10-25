@@ -1,0 +1,8 @@
+{
+  "request_type": "query",
+  "query": {
+    "category": "files",
+    "topic": "AGENTS",
+    "question": "What are the best practices for writing AGENTS files?"
+  }
+}
