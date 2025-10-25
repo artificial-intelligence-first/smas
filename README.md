@@ -1,6 +1,6 @@
-# SMAS (SSOT Management Agents System)
+# SSOT Manager
 
-[![CI Status](https://github.com/artificial-intelligence-first/smas/workflows/CI/badge.svg)](https://github.com/artificial-intelligence-first/smas/actions)
+[![CI Status](https://github.com/artificial-intelligence-first/ssot-manager/workflows/CI/badge.svg)](https://github.com/artificial-intelligence-first/ssot-manager/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
@@ -8,7 +8,7 @@ AI agent system for managing the [SSOT (Single Source of Truth)](https://github.
 
 ## Overview
 
-SMAS automates SSOT repository management through intelligent agents:
+SSOT Manager automates SSOT repository management through intelligent agents:
 - **Query**: Search and retrieve information via A2A protocol
 - **Validate**: Markdown linting, link checking, quality assurance
 - **Analyze**: Cross-reference analysis, orphan detection, terminology usage
@@ -30,8 +30,8 @@ SSOTManagerMAG (Main Orchestrator) ├── ContentRetrieverSAG (Information re
 
 ```bash
 # Clone repository
-git clone https://github.com/artificial-intelligence-first/smas.git
-cd smas
+git clone https://github.com/artificial-intelligence-first/ssot-manager.git
+cd ssot-manager
 
 # Install dependencies
 uv sync --extra dev
@@ -80,7 +80,7 @@ echo '{
 ## Project Structure
 
 ```
-smas/
+ssot-manager/
 ├── catalog/
 │   ├── agents/
 │   │   ├── main/

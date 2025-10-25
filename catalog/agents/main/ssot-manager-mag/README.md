@@ -1,6 +1,6 @@
 # SSOTManagerMAG
 
-SSOTManagerMAG orchestrates SMAS workflows by routing SSOT requests to specialized Sub Agents. It validates payloads via contract schemas and records observability metadata for every request.
+SSOTManagerMAG orchestrates SSOT Manager workflows by routing SSOT requests to specialized Sub Agents. It validates payloads via contract schemas and records observability metadata for every request.
 
 ## Responsibilities
 

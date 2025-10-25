@@ -1,6 +1,6 @@
-# SMAS Usage Examples
+# SSOT Manager Usage Examples
 
-This directory contains example payloads for SMAS operations.
+This directory contains example payloads for SSOT Manager operations.
 
 ## Query Example
 
