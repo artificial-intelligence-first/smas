@@ -3,9 +3,9 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "smas"
+name = "ssot-manager"
 version = "0.1.0"
-description = "SSOT Management Agents System built on the AGDD framework."
+description = "SSOT Manager - AI agent system for managing the SSOT repository using the AGDD framework."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

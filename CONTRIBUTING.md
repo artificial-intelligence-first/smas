@@ -1,6 +1,6 @@
-# Contributing to SMAS
+# Contributing to SSOT Manager
 
-Thank you for your interest in contributing to SMAS (SSOT Management Agents System)!
+Thank you for your interest in contributing to SSOT Manager!
 
 ## Development Setup
 
@@ -14,8 +14,8 @@ Thank you for your interest in contributing to SMAS (SSOT Management Agents Syst
 
 ```bash
 # Clone repository
-git clone https://github.com/artificial-intelligence-first/smas.git
-cd smas
+git clone https://github.com/artificial-intelligence-first/ssot-manager.git
+cd ssot-manager
 
 # Install dependencies
 uv sync --extra dev
@@ -223,4 +223,4 @@ Each agent should have a comprehensive README covering:
 - Open an issue for bugs or feature requests
 - Start a discussion for general questions
 - Check existing issues/PRs before creating new ones
-- Thank you for contributing to SMAS!
+- Thank you for contributing to SSOT Manager!

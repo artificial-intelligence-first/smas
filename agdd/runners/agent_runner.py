@@ -17,7 +17,7 @@ _AGENT_MODULES = {
 
 
 def _discover_repo_root() -> Path:
-    """Locate the SMAS repository root."""
+    """Locate the SSOT Manager repository root."""
     repo_root = Path(__file__).resolve().parents[2]
     candidates = [
         Path.cwd(),
@@ -27,7 +27,7 @@ def _discover_repo_root() -> Path:
     for candidate in candidates:
         if (candidate / "catalog" / "agents").exists():
             return candidate
-    raise RuntimeError("Unable to locate SMAS repository root for AGDD stub.")
+    raise RuntimeError("Unable to locate SSOT Manager repository root for AGDD stub.")
 
 
 @lru_cache(maxsize=None)
