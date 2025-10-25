@@ -16,7 +16,14 @@ SSOT Manager automates SSOT repository management through intelligent agents:
 
 ## Architecture
 
-SSOTManagerMAG (Main Orchestrator) ├── ContentRetrieverSAG (Information retrieval) ├── ContentValidatorSAG (Quality validation) ├── TaxonomyManagerSAG (Terminology management) ├── CrossRefAnalyzerSAG (Reference analysis) └── ContentUpdaterSAG (Content updates)
+```
+SSOTManagerMAG (Main Orchestrator)
+├── ContentRetrieverSAG (Information retrieval)
+├── ContentValidatorSAG (Quality validation)
+├── TaxonomyManagerSAG (Terminology management)
+├── CrossRefAnalyzerSAG (Reference analysis)
+└── ContentUpdaterSAG (Content updates)
+```
 
 ## Quick Start
 
