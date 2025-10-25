@@ -77,6 +77,43 @@ echo '{
 }' | SSOT_REPO_PATH=external/ssot uv run python -m catalog.agents.main.ssot_manager_mag.code.orchestrator
 ```
 
+### HTTP API Server
+
+Start the API server for HTTP-based access:
+
+```bash
+# Development server with auto-reload
+uvicorn catalog.api.server:app --reload
+
+# Production server
+uvicorn catalog.api.server:app --host 0.0.0.0 --port 8000
+```
+
+**Available Endpoints:**
+- `POST /api/v1/execute` - Execute query/validate/analyze/update requests
+- `GET /api/v1/health` - Health check
+- `POST /webhooks/github` - GitHub webhook integration
+- `POST /agdd/invoke/{agent_slug}` - A2A protocol agent invocation
+- `GET /agdd/registry` - List available agents
+- `GET /docs` - Interactive API documentation (Swagger UI)
+
+**Example API Request:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "request_type": "query",
+    "query": {
+      "category": "files",
+      "topic": "AGENTS",
+      "question": "What are AGENTS best practices?"
+    }
+  }'
+```
+
+See [API Documentation](./docs/API.md) for detailed usage examples.
+
 ## Documentation
 
 - [Contributing Guide](./CONTRIBUTING.md)
@@ -165,12 +202,17 @@ uv run mypy catalog/ --ignore-missing-imports
 
 ## Roadmap
 
-- Semantic search with vector embeddings (FAISS/Redis)
-- GitHub Webhook integration for automated validation
+### Completed ✅
 - HTTP API server for A2A communication
+- GitHub Webhook integration for automated validation
+- A2A protocol endpoints
+
+### In Progress
+- Semantic search with vector embeddings (FAISS/Redis)
 - Advanced taxonomy analysis with NLP
 - Bulk content operations
 - AGDD official package integration (when published)
+- GitHub Status API integration for webhook results
 
 ## License
 
