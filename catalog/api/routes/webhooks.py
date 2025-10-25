@@ -60,8 +60,17 @@ async def github_webhook(
     # Get raw body for signature verification
     body = await request.body()
 
-    # Verify webhook signature (skip for ping events during setup)
+    # Enforce webhook secret configuration for security
     webhook_secret = os.getenv("GITHUB_WEBHOOK_SECRET")
+
+    # Reject non-ping events if webhook secret is not configured
+    if not webhook_secret and x_github_event != "ping":
+        raise HTTPException(
+            status_code=500,
+            detail="GITHUB_WEBHOOK_SECRET not configured - webhook processing disabled for security",
+        )
+
+    # Verify webhook signature for non-ping events
     if webhook_secret and x_github_event != "ping":
         if not x_hub_signature_256:
             raise HTTPException(
