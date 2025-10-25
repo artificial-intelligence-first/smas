@@ -19,7 +19,9 @@ from catalog.agents.sub.crossref_analyzer_sag.code.analyzer import (
 class TestCrossRefAnalyzerSAG:
     """Test suite for CrossRefAnalyzerSAG"""
 
-    def test_run_builds_reference_graph(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_run_builds_reference_graph(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Run should analyze repository and produce statistics"""
         repo_root = tmp_path / "repo"
         files_dir = repo_root / "files"

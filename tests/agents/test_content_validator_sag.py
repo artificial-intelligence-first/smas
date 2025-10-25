@@ -4,7 +4,6 @@ Tests for ContentValidatorSAG
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -35,11 +34,15 @@ class TestContentValidatorSAG:
         assert result["errors"] == []
         assert result["total_files"] == 1
 
-    def test_run_category_scope_filters(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_run_category_scope_filters(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Category scope should only scan requested directory"""
         repo_root = tmp_path / "repo"
         (repo_root / "files").mkdir(parents=True)
-        (repo_root / "files" / "bad.md").write_text("####### Too deep", encoding="utf-8")
+        (repo_root / "files" / "bad.md").write_text(
+            "####### Too deep", encoding="utf-8"
+        )
         (repo_root / "engineering").mkdir(parents=True)
         (repo_root / "engineering" / "ok.md").write_text("# Fine\n", encoding="utf-8")
 
@@ -54,7 +57,9 @@ class TestContentValidatorSAG:
         assert any(err["file"] == "files/bad.md" for err in result["errors"])
         assert all("engineering" not in err.get("file", "") for err in result["errors"])
 
-    def test_run_file_scope_invalid_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_run_file_scope_invalid_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Reject attempts to escape repository via target_file"""
         repo_root = tmp_path / "repo"
         repo_root.mkdir()

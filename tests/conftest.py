@@ -30,6 +30,10 @@ def _ensure_package(name: str) -> types.ModuleType:
         module = types.ModuleType(name)
         module.__path__ = []  # type: ignore[attr-defined]
         sys.modules[name] = module
+        if "." in name:
+            parent_name, child_name = name.rsplit(".", 1)
+            parent_module = _ensure_package(parent_name)
+            setattr(parent_module, child_name, module)
     return module
 
 

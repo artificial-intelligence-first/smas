@@ -8,12 +8,11 @@ version = "0.1.0"
 description = "SSOT Management Agents System built on the AGDD framework."
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
   {name = "Artificial Intelligence First"}
 ]
 dependencies = [
-  "agdd>=0.1.0",
   "pydantic>=1.10,<3.0",
   "uvicorn>=0.24",
   "rich>=13.7"
@@ -45,3 +44,8 @@ markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
   "integration: marks tests as integration tests",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["catalog*", "agdd*"]
+exclude = ["external*"]

@@ -7,16 +7,18 @@ from __future__ import annotations
 import pytest
 import pytest_mock
 
-from catalog.agents.main.ssot-manager-mag.code.orchestrator import run
+from catalog.agents.main.ssot_manager_mag.code.orchestrator import run
 
 
 class TestSSOTManagerMAG:
     """Test suite for SSOTManagerMAG"""
 
-    def test_handle_query_success(self, mocker: pytest_mock.plugin.MockerFixture) -> None:
+    def test_handle_query_success(
+        self, mocker: pytest_mock.plugin.MockerFixture
+    ) -> None:
         """Test successful query handling"""
         mock_invoke_sag = mocker.patch(
-            "catalog.agents.main.ssot-manager-mag.code.orchestrator.invoke_sag"
+            "catalog.agents.main.ssot_manager_mag.code.orchestrator.invoke_sag"
         )
         mock_invoke_sag.return_value = {
             "question": "What is AGENTS?",
@@ -42,10 +44,12 @@ class TestSSOTManagerMAG:
         assert "metadata" in result
         assert result["metadata"]["run_id"] == "test-mag-001"
 
-    def test_handle_validate_success(self, mocker: pytest_mock.plugin.MockerFixture) -> None:
+    def test_handle_validate_success(
+        self, mocker: pytest_mock.plugin.MockerFixture
+    ) -> None:
         """Test successful validation handling"""
         mock_invoke_sag = mocker.patch(
-            "catalog.agents.main.ssot-manager-mag.code.orchestrator.invoke_sag"
+            "catalog.agents.main.ssot_manager_mag.code.orchestrator.invoke_sag"
         )
         mock_invoke_sag.return_value = {
             "passed": True,
@@ -62,10 +66,12 @@ class TestSSOTManagerMAG:
         assert result["response_type"] == "validation_report"
         assert result["status"] == "success"
 
-    def test_handle_analyze_crossref(self, mocker: pytest_mock.plugin.MockerFixture) -> None:
+    def test_handle_analyze_crossref(
+        self, mocker: pytest_mock.plugin.MockerFixture
+    ) -> None:
         """Test cross-reference analysis"""
         mock_invoke_sag = mocker.patch(
-            "catalog.agents.main.ssot-manager-mag.code.orchestrator.invoke_sag"
+            "catalog.agents.main.ssot_manager_mag.code.orchestrator.invoke_sag"
         )
         mock_invoke_sag.return_value = {
             "reference_graph": {},
@@ -96,7 +102,7 @@ class TestSSOTManagerMAG:
     ) -> None:
         """Test update request with validation failure"""
         mock_invoke_sag = mocker.patch(
-            "catalog.agents.main.ssot-manager-mag.code.orchestrator.invoke_sag"
+            "catalog.agents.main.ssot_manager_mag.code.orchestrator.invoke_sag"
         )
         mock_invoke_sag.return_value = {
             "passed": False,

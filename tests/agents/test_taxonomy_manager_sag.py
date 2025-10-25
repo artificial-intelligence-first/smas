@@ -4,7 +4,6 @@ Tests for TaxonomyManagerSAG
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -18,7 +17,9 @@ from catalog.agents.sub.taxonomy_manager_sag.code.taxonomy import (
 class TestTaxonomyManagerSAG:
     """Test suite for TaxonomyManagerSAG"""
 
-    def test_validate_passes_with_known_terms(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_validate_passes_with_known_terms(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Validation should pass when all tags exist in taxonomy"""
         repo_root = tmp_path / "repo"
         taxonomy_file = repo_root / "_meta" / "TAXONOMY.md"
@@ -40,7 +41,9 @@ tags: ['agents']
         assert result["passed"] is True
         assert result["issues"] == []
 
-    def test_validate_reports_unknown_terms(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_validate_reports_unknown_terms(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Unknown tags should yield issues with suggestions"""
         repo_root = tmp_path / "repo"
         taxonomy_file = repo_root / "_meta" / "TAXONOMY.md"
@@ -63,7 +66,9 @@ tags: ['agentz']
         assert result["issues"]
         assert result["issues"][0]["suggestions"]
 
-    def test_analyze_counts_term_usage(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_analyze_counts_term_usage(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Analyze operation should count taxonomy term occurrences"""
         repo_root = tmp_path / "repo"
         taxonomy_file = repo_root / "_meta" / "TAXONOMY.md"
@@ -72,7 +77,9 @@ tags: ['agentz']
 
         docs_dir = repo_root / "files"
         docs_dir.mkdir(parents=True)
-        (docs_dir / "doc.md").write_text("Agents are important.\nagents improve docs.", encoding="utf-8")
+        (docs_dir / "doc.md").write_text(
+            "Agents are important.\nagents improve docs.", encoding="utf-8"
+        )
 
         monkeypatch.setenv("SSOT_REPO_PATH", str(repo_root))
 

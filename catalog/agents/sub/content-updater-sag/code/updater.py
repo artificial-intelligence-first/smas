@@ -11,195 +11,199 @@ from agdd.observability.logger import ObservabilityLogger
 
 
 def _resolve_repo_path(repo_root: str, target_file: str) -> tuple[str, str]:
-  """Return sanitized repo-relative and absolute paths for the requested file."""
-  if not target_file:
-    raise ValueError("target_file is required")
-  if os.path.isabs(target_file):
-    raise ValueError("target_file must be relative")
+    """Return sanitized repo-relative and absolute paths for the requested file."""
+    if not target_file:
+        raise ValueError("target_file is required")
+    if os.path.isabs(target_file):
+        raise ValueError("target_file must be relative")
 
-  normalized = os.path.normpath(target_file)
-  if normalized in ("", "."):
-    raise ValueError("target_file must reference a file within the repository")
-  if normalized.startswith(".."):
-    raise ValueError("target_file escapes repository")
+    normalized = os.path.normpath(target_file)
+    if normalized in ("", "."):
+        raise ValueError("target_file must reference a file within the repository")
+    if normalized.startswith(".."):
+        raise ValueError("target_file escapes repository")
 
-  repo_root_real = os.path.realpath(repo_root)
-  target_abs = os.path.realpath(os.path.join(repo_root_real, normalized))
-  if os.path.commonpath([repo_root_real, target_abs]) != repo_root_real:
-    raise ValueError("target_file escapes repository")
+    repo_root_real = os.path.realpath(repo_root)
+    target_abs = os.path.realpath(os.path.join(repo_root_real, normalized))
+    if os.path.commonpath([repo_root_real, target_abs]) != repo_root_real:
+        raise ValueError("target_file escapes repository")
 
-  return normalized, target_abs
+    return normalized, target_abs
 
 
 def run(payload: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-  """Update repository content and perform Git operations."""
-  run_id = context.get("run_id", "sag-unknown")
-  logger = ObservabilityLogger(run_id, agent_name="ContentUpdaterSAG")
+    """Update repository content and perform Git operations."""
+    run_id = context.get("run_id", "sag-unknown")
+    logger = ObservabilityLogger(run_id, agent_name="ContentUpdaterSAG")
 
-  logger.log("start", {"payload": payload})
+    logger.log("start", {"payload": payload})
 
-  target_file_input = payload["target_file"]
-  operation = payload["operation"]
-  content = payload.get("content", "")
-  reason = payload.get("reason", "Update via SMAS")
+    target_file_input = payload["target_file"]
+    operation = payload["operation"]
+    content = payload.get("content", "")
+    reason = payload.get("reason", "Update via SMAS")
 
-  ssot_repo_path = os.getenv("SSOT_REPO_PATH", "/path/to/ssot")
-  repo_root = os.path.realpath(ssot_repo_path)
-  target_file, file_path = _resolve_repo_path(repo_root, target_file_input)
+    ssot_repo_path = os.getenv("SSOT_REPO_PATH", "/path/to/ssot")
+    repo_root = os.path.realpath(ssot_repo_path)
+    target_file, file_path = _resolve_repo_path(repo_root, target_file_input)
 
-  if operation == "add":
-    _add_content(file_path, content, logger)
-  elif operation == "update":
-    _update_content(file_path, content, logger)
-  elif operation == "delete":
-    _delete_content(file_path, logger)
-  else:
-    raise ValueError(f"Unknown operation: {operation}")
+    if operation == "add":
+        _add_content(file_path, content, logger)
+    elif operation == "update":
+        _update_content(file_path, content, logger)
+    elif operation == "delete":
+        _delete_content(file_path, logger)
+    else:
+        raise ValueError(f"Unknown operation: {operation}")
 
-  branch_suffix = _sanitize_ref_component(run_id)
-  branch_name = f"smas-update-{branch_suffix}"
-  commit_sha = _git_commit(
-    repo_root,
-    target_file,
-    branch_name,
-    reason,
-    logger,
-  )
+    branch_suffix = _sanitize_ref_component(run_id)
+    branch_name = f"smas-update-{branch_suffix}"
+    commit_sha = _git_commit(
+        repo_root,
+        target_file,
+        branch_name,
+        reason,
+        logger,
+    )
 
-  pr_url = None
-  if os.getenv("GITHUB_TOKEN"):
-    pr_url = _create_pull_request(repo_root, branch_name, target_file, reason, logger)
+    pr_url = None
+    if os.getenv("GITHUB_TOKEN"):
+        pr_url = _create_pull_request(
+            repo_root, branch_name, target_file, reason, logger
+        )
 
-  logger.log(
-    "end",
-    {
-      "files_modified": [target_file],
-      "commit_sha": commit_sha,
-      "pr_url": pr_url,
-    },
-  )
+    logger.log(
+        "end",
+        {
+            "files_modified": [target_file],
+            "commit_sha": commit_sha,
+            "pr_url": pr_url,
+        },
+    )
 
-  return {
-    "files_modified": [target_file],
-    "commit_sha": commit_sha,
-    "pr_url": pr_url,
-    "branch": branch_name,
-    "validation_passed": True,
-  }
+    return {
+        "files_modified": [target_file],
+        "commit_sha": commit_sha,
+        "pr_url": pr_url,
+        "branch": branch_name,
+        "validation_passed": True,
+    }
 
 
 def _add_content(file_path: str, content: str, logger: ObservabilityLogger) -> None:
-  """Add new content to the repository."""
-  os.makedirs(os.path.dirname(file_path), exist_ok=True)
-  with open(file_path, "w", encoding="utf-8") as handle:
-    handle.write(content)
+    """Add new content to the repository."""
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, "w", encoding="utf-8") as handle:
+        handle.write(content)
 
-  logger.log("content_added", {"file": file_path})
+    logger.log("content_added", {"file": file_path})
 
 
 def _update_content(file_path: str, content: str, logger: ObservabilityLogger) -> None:
-  """Overwrite existing content."""
-  if not os.path.exists(file_path):
-    raise FileNotFoundError(f"File not found: {file_path}")
+    """Overwrite existing content."""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
 
-  with open(file_path, "w", encoding="utf-8") as handle:
-    handle.write(content)
+    with open(file_path, "w", encoding="utf-8") as handle:
+        handle.write(content)
 
-  logger.log("content_updated", {"file": file_path})
+    logger.log("content_updated", {"file": file_path})
 
 
 def _delete_content(file_path: str, logger: ObservabilityLogger) -> None:
-  """Delete a file if it exists."""
-  if os.path.exists(file_path):
-    os.remove(file_path)
-    logger.log("content_deleted", {"file": file_path})
+    """Delete a file if it exists."""
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        logger.log("content_deleted", {"file": file_path})
 
 
 def _git_commit(
-  repo_path: str,
-  file: str,
-  branch: str,
-  message: str,
-  logger: ObservabilityLogger,
+    repo_path: str,
+    file: str,
+    branch: str,
+    message: str,
+    logger: ObservabilityLogger,
 ) -> str:
-  """Create a feature branch, stage changes, and commit."""
-  original_cwd = os.getcwd()
-  try:
-    os.chdir(repo_path)
+    """Create a feature branch, stage changes, and commit."""
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo_path)
 
-    branch_check = subprocess.run(
-      ["git", "rev-parse", "--verify", branch],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL,
-    )
-    if branch_check.returncode == 0:
-      subprocess.run(["git", "checkout", branch], check=True)
-    else:
-      subprocess.run(["git", "checkout", "-b", branch], check=True)
-
-    stage_cmd = ["git", "add", file]
-    if not os.path.exists(os.path.join(repo_path, file)):
-      stage_cmd = ["git", "add", "-A", file]
-    stage_result = subprocess.run(stage_cmd, capture_output=True, text=True)
-    if stage_result.returncode != 0:
-      # Retry with git add -A to ensure deletions are staged even for directories.
-      fallback = subprocess.run(
-        ["git", "add", "-A"],
-        capture_output=True,
-        text=True,
-      )
-      if fallback.returncode != 0:
-        raise subprocess.CalledProcessError(
-          fallback.returncode,
-          fallback.args,
-          output=fallback.stdout,
-          stderr=fallback.stderr,
+        branch_check = subprocess.run(
+            ["git", "rev-parse", "--verify", branch],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
+        if branch_check.returncode == 0:
+            subprocess.run(["git", "checkout", branch], check=True)
+        else:
+            subprocess.run(["git", "checkout", "-b", branch], check=True)
 
-    full_message = f"{message}\n\nGenerated by SMAS"
-    subprocess.run(["git", "commit", "-m", full_message], check=True)
-    result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
-    commit_sha = result.stdout.strip()
-    logger.log("git_commit", {"commit_sha": commit_sha, "branch": branch})
-    return commit_sha
-  finally:
-    os.chdir(original_cwd)
+        stage_cmd = ["git", "add", file]
+        if not os.path.exists(os.path.join(repo_path, file)):
+            stage_cmd = ["git", "add", "-A", file]
+        stage_result = subprocess.run(stage_cmd, capture_output=True, text=True)
+        if stage_result.returncode != 0:
+            # Retry with git add -A to ensure deletions are staged even for directories.
+            fallback = subprocess.run(
+                ["git", "add", "-A"],
+                capture_output=True,
+                text=True,
+            )
+            if fallback.returncode != 0:
+                raise subprocess.CalledProcessError(
+                    fallback.returncode,
+                    fallback.args,
+                    output=fallback.stdout,
+                    stderr=fallback.stderr,
+                )
+
+        full_message = f"{message}\n\nGenerated by SMAS"
+        subprocess.run(["git", "commit", "-m", full_message], check=True)
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        )
+        commit_sha = result.stdout.strip()
+        logger.log("git_commit", {"commit_sha": commit_sha, "branch": branch})
+        return commit_sha
+    finally:
+        os.chdir(original_cwd)
 
 
 def _create_pull_request(
-  repo_path: str,
-  branch: str,
-  file: str,
-  reason: str,
-  logger: ObservabilityLogger,
+    repo_path: str,
+    branch: str,
+    file: str,
+    reason: str,
+    logger: ObservabilityLogger,
 ) -> str:
-  """Push the branch and create a pull request via GitHub CLI."""
-  original_cwd = os.getcwd()
-  try:
-    os.chdir(repo_path)
-    subprocess.run(["git", "push", "-u", "origin", branch], check=True)
+    """Push the branch and create a pull request via GitHub CLI."""
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo_path)
+        subprocess.run(["git", "push", "-u", "origin", branch], check=True)
 
-    pr_title = f"Update {file}"
-    pr_body = f"{reason}\n\nAutomatically generated by SMAS"
+        pr_title = f"Update {file}"
+        pr_body = f"{reason}\n\nAutomatically generated by SMAS"
 
-    result = subprocess.run(
-      ["gh", "pr", "create", "--title", pr_title, "--body", pr_body],
-      capture_output=True,
-      text=True,
-      check=True,
-    )
+        result = subprocess.run(
+            ["gh", "pr", "create", "--title", pr_title, "--body", pr_body],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
 
-    pr_url = result.stdout.strip()
-    logger.log("pr_created", {"pr_url": pr_url})
-    return pr_url
-  finally:
-    os.chdir(original_cwd)
+        pr_url = result.stdout.strip()
+        logger.log("pr_created", {"pr_url": pr_url})
+        return pr_url
+    finally:
+        os.chdir(original_cwd)
 
 
 def _sanitize_ref_component(component: str) -> str:
-  """Sanitize run identifiers so they are safe for branch names."""
-  safe = re.sub(r"[^A-Za-z0-9._-]+", "-", component)
-  safe = safe.strip("-")
-  if not safe:
-    safe = "run"
-  return safe[:100]
+    """Sanitize run identifiers so they are safe for branch names."""
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "-", component)
+    safe = safe.strip("-")
+    if not safe:
+        safe = "run"
+    return safe[:100]

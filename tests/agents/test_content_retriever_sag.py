@@ -7,11 +7,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import pytest
-
 from catalog.agents.sub.content_retriever_sag.code.retriever import (
     run,
-    _search_files,
     _calculate_relevance,
     _extract_relevant_section,
 )

@@ -4,7 +4,6 @@ Tests for ContentUpdaterSAG
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -20,7 +19,9 @@ from catalog.agents.sub.content_updater_sag.code.updater import (
 class TestContentUpdaterSAG:
     """Test suite for ContentUpdaterSAG"""
 
-    def test_run_add_creates_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_run_add_creates_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Add operation should write file and return commit info"""
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
@@ -52,7 +53,9 @@ class TestContentUpdaterSAG:
         git_mock.assert_called_once()
         assert result["commit_sha"] == "abc123"
 
-    def test_run_delete_removes_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_run_delete_removes_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Delete operation should remove file if present"""
         repo_root = tmp_path / "repo"
         target = repo_root / "docs" / "obsolete.md"
@@ -80,7 +83,10 @@ class TestContentUpdaterSAG:
     def test_run_unknown_operation(self) -> None:
         """Invalid operations should raise ValueError"""
         with pytest.raises(ValueError):
-            run({"operation": "rename", "target_file": "docs/doc.md"}, {"run_id": "updater-003"})
+            run(
+                {"operation": "rename", "target_file": "docs/doc.md"},
+                {"run_id": "updater-003"},
+            )
 
     def test_resolve_repo_path_rejects_escape(self, tmp_path: Path) -> None:
         """Reject attempts to navigate outside repository"""
