@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import time
+from pathlib import Path
 from typing import Any, Dict
 
+import yaml
 from fastapi import APIRouter, HTTPException
 
 from agdd.runners.agent_runner import invoke_sag
@@ -75,45 +77,46 @@ async def list_agents() -> Dict[str, Any]:
 
     Returns agent metadata including versions, paths, and capabilities.
     """
-    # TODO: Parse catalog/registry/agents.yaml
-    return {
-        "agents": [
-            {
-                "slug": "ssot-manager-mag",
-                "version": "0.1.0",
-                "role": "main",
-                "uri": "agdd://main.ssot-manager-mag@0.1.0",
-            },
-            {
-                "slug": "content-retriever-sag",
-                "version": "0.1.0",
-                "role": "sub",
-                "uri": "agdd://sub.content-retriever-sag@0.1.0",
-            },
-            {
-                "slug": "content-validator-sag",
-                "version": "0.1.0",
-                "role": "sub",
-                "uri": "agdd://sub.content-validator-sag@0.1.0",
-            },
-            {
-                "slug": "taxonomy-manager-sag",
-                "version": "0.1.0",
-                "role": "sub",
-                "uri": "agdd://sub.taxonomy-manager-sag@0.1.0",
-            },
-            {
-                "slug": "crossref-analyzer-sag",
-                "version": "0.1.0",
-                "role": "sub",
-                "uri": "agdd://sub.crossref-analyzer-sag@0.1.0",
-            },
-            {
-                "slug": "content-updater-sag",
-                "version": "0.1.0",
-                "role": "sub",
-                "uri": "agdd://sub.content-updater-sag@0.1.0",
-            },
-        ],
-        "count": 6,
-    }
+    # Parse catalog/registry/agents.yaml
+    registry_path = Path(__file__).parent.parent.parent / "registry" / "agents.yaml"
+
+    try:
+        with open(registry_path, "r") as f:
+            registry_data = yaml.safe_load(f)
+
+        agents = []
+        for agent in registry_data.get("agents", []):
+            slug = agent["slug"]
+            version = agent["version"]
+
+            # Determine role based on slug suffix
+            role = "main" if slug.endswith("-mag") else "sub"
+
+            # Build A2A URI
+            uri = f"agdd://{role}.{slug}@{version}"
+
+            agents.append(
+                {
+                    "slug": slug,
+                    "version": version,
+                    "role": role,
+                    "uri": uri,
+                    "path": agent.get("path"),
+                }
+            )
+
+        return {
+            "agents": agents,
+            "count": len(agents),
+        }
+
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Agent registry not found at {registry_path}",
+        )
+    except yaml.YAMLError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to parse agent registry: {str(exc)}",
+        )
