@@ -95,13 +95,15 @@ async def list_agents() -> Dict[str, Any]:
             # Build A2A URI
             uri = f"agdd://{role}.{slug}@{version}"
 
-            agents.append({
-                "slug": slug,
-                "version": version,
-                "role": role,
-                "uri": uri,
-                "path": agent.get("path"),
-            })
+            agents.append(
+                {
+                    "slug": slug,
+                    "version": version,
+                    "role": role,
+                    "uri": uri,
+                    "path": agent.get("path"),
+                }
+            )
 
         return {
             "agents": agents,
